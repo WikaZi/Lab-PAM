@@ -1,6 +1,5 @@
-package pl.wsei.pam.lab01
+package pl.wsei.pam.lab02
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -8,27 +7,29 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import pl.wsei.pam.lab02.Lab02Activity
+import pl.wsei.pam.lab01.R
 
-class MainActivity : AppCompatActivity() {
+class Lab02Activity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_lab02)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
     }
-    fun onClickMainBtnRunLab01(v: View){
-        Toast.makeText(this, "Clicked", Toast.LENGTH_SHORT).show()
-        val intent = Intent(this, Lab01Activity::class.java)
-        startActivity(intent)
-    }
-    fun onClickMainBtnRunLab02(v: View){
-        Toast.makeText(this, "Clicked", Toast.LENGTH_SHORT).show()
-        val intent = Intent(this, Lab02Activity::class.java)
-        startActivity(intent)
+    fun onBoardSizeSelected(v: View) {
+        val tag: String? = v.tag as String?
+        val tokens: List<String>? = tag?.split(" ")
+        val rows = tokens?.get(0)?.toIntOrNull()
+        val columns = tokens?.get(1)?.toIntOrNull()
+
+        if (rows != null && columns != null) {
+            Toast.makeText(this, "Wybrano planszę: ${rows}x${columns}", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Błąd odczytu rozmiaru planszy", Toast.LENGTH_SHORT).show()
+        }
     }
 }
