@@ -8,7 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import pl.wsei.pam.lab02.Lab02Activity
+import lab02.MainActivity2
+
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     }
     fun onClickMainBtnRunLab02(v: View){
         Toast.makeText(this, "Clicked", Toast.LENGTH_SHORT).show()
-        val intent = Intent(this, Lab02Activity::class.java)
+        val intent = Intent(this, MainActivity2::class.java)
         startActivity(intent)
     }
 }
