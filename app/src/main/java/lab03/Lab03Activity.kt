@@ -16,7 +16,7 @@ import pl.wsei.pam.lab01.R.*
 class Lab03Activity : AppCompatActivity() {
     private lateinit var mBoard: GridLayout
 
-    //dziala
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
