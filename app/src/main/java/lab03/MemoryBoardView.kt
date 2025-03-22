@@ -1,4 +1,3 @@
-
 import android.view.Gravity
 import android.view.View
 import android.widget.ImageButton
@@ -39,6 +38,20 @@ class MemoryBoardView(
     private val matchedPair: ArrayDeque<Tile> = ArrayDeque()
     private val logic: MemoryGameLogic = MemoryGameLogic(cols * rows / 2)
 
+    fun getState(): IntArray {
+        return tiles.values.map {
+            if (it.revealed) it.tileResource else -1
+        }.toIntArray()
+    }
+
+    fun setState(state: IntArray) {
+        val shuffledIcons = state.toMutableList()
+        tiles.values.forEachIndexed { index, tile ->
+            val resource = shuffledIcons.removeAt(0)
+            tile.revealed = resource != -1
+            tile.button.setImageResource(if (tile.revealed) resource else deckResource)
+        }
+    }
 
     init {
         val shuffledIcons: MutableList<Int> = mutableListOf<Int>().apply {
