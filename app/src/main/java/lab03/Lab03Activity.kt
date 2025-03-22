@@ -1,10 +1,9 @@
 package lab03
 
-import android.content.Intent
+import MemoryBoardView
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.ImageButton
-import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -15,6 +14,8 @@ import pl.wsei.pam.lab01.R.*
 
 class Lab03Activity : AppCompatActivity() {
     private lateinit var mBoard: GridLayout
+    private lateinit var mBoardModel: MemoryBoardView
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +29,7 @@ class Lab03Activity : AppCompatActivity() {
 
         val rows = intent.getIntExtra("rows", 3)
         val columns = intent.getIntExtra("columns", 3)
+        mBoardModel = MemoryBoardView(mBoard, columns, rows)
 
         mBoard.rowCount = rows
         mBoard.columnCount = columns
@@ -50,6 +52,9 @@ class Lab03Activity : AppCompatActivity() {
 
 
                     mBoard.addView(it)
+                }
+                btn.setOnClickListener {
+                    btn.setImageResource(R.drawable.baseline_school_24)
                 }
             }
         }

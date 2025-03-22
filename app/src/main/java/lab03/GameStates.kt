@@ -1,4 +1,6 @@
-package lab03;
+package lab03
 
-public class GameStates {
+enum class GameStates {
+    Matching, Match, NoMatch, Finished
 }
+
