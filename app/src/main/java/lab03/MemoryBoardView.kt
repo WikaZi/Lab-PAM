@@ -39,6 +39,7 @@ class MemoryBoardView(
     private val matchedPair: ArrayDeque<Tile> = ArrayDeque()
     private val logic: MemoryGameLogic = MemoryGameLogic(cols * rows / 2)
 
+
     init {
         val shuffledIcons: MutableList<Int> = mutableListOf<Int>().apply {
 
@@ -76,31 +77,45 @@ class MemoryBoardView(
     private fun onClickTile(v: View) {
         val tile = tiles[v.tag] ?: return
         if (tile.revealed) return
+
         tile.revealed = true
         tile.button.setImageResource(tile.tileResource)
 
-        matchedPair.addFirst(tile)
+        if (matchedPair.isEmpty()) {
+            matchedPair.addFirst(tile)
+        } else if (matchedPair.size == 1) {
+            matchedPair.addLast(tile)
+        }
 
-        val matchResult = logic.process { tile.tileResource }
+        if (matchedPair.size == 2) {
+            val matchResult = if (matchedPair[0].tileResource == matchedPair[1].tileResource) {
+                GameStates.Matching
+            } else {
+                GameStates.NoMatch
+            }
 
-        val event = MemoryGameEvent(matchedPair.toList(), matchResult)
-        onGameChangeStateListener.invoke(event)
+            val event = MemoryGameEvent(matchedPair.toList(), matchResult)
+            onGameChangeStateListener.invoke(event)
 
-        if (matchResult != GameStates.Matching) {
-            matchedPair.clear()
-            android.os.Handler().postDelayed({
 
-                matchedPair.forEach {
-                    it.revealed = false
-                    it.button.setImageResource(deckResource)
-                }
+            if (matchResult != GameStates.Matching) {
+                android.os.Handler().postDelayed({
+                    matchedPair.forEach {
+                        it.revealed = false
+                        it.button.setImageResource(deckResource)
+                    }
+                    matchedPair.clear()
+                }, 1000)
+            } else {
+
                 matchedPair.clear()
-            }, 1000)
+            }
         }
     }
-
 
     fun setOnGameChangeListener(listener: (event: MemoryGameEvent) -> Unit) {
         onGameChangeStateListener = listener
     }
 }
+
+
