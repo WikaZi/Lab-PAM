@@ -2,8 +2,6 @@ package lab03
 
 import MemoryBoardView
 import android.os.Bundle
-import android.view.Gravity
-import android.widget.ImageButton
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -16,57 +14,28 @@ class Lab03Activity : AppCompatActivity() {
     private lateinit var mBoard: GridLayout
     private lateinit var mBoardModel: MemoryBoardView
 
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_lab03)
 
-
         mBoard = findViewById(R.id.main3)
-
 
         val rows = intent.getIntExtra("rows", 3)
         val columns = intent.getIntExtra("columns", 3)
+
+
         mBoardModel = MemoryBoardView(mBoard, columns, rows)
 
         mBoard.rowCount = rows
         mBoard.columnCount = columns
 
-        for (row in 0 until rows) {
-            for (col in 0 until columns) {
-                val btn = ImageButton(this).also {
-                    it.tag = "${row}x${col}"
 
-
-                    val layoutParams = GridLayout.LayoutParams()
-                    layoutParams.width = 0
-                    layoutParams.height = 0
-                    layoutParams.setGravity(Gravity.CENTER)
-                    layoutParams.columnSpec = GridLayout.spec(col, 1, 1f)
-                    layoutParams.rowSpec = GridLayout.spec(row, 1, 1f)
-
-                    it.layoutParams = layoutParams
-                    it.setImageResource(R.drawable.baseline_rocket_launch_24)
-
-
-                    mBoard.addView(it)
-                }
-                btn.setOnClickListener {
-                    btn.setImageResource(R.drawable.baseline_school_24)
-                }
-            }
-        }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(id.main3)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
-
-
-
         }
     }
-
 }

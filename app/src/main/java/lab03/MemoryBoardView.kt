@@ -80,6 +80,7 @@ class MemoryBoardView(
         tile.button.setImageResource(tile.tileResource)
 
         matchedPair.addFirst(tile)
+
         val matchResult = logic.process { tile.tileResource }
 
         val event = MemoryGameEvent(matchedPair.toList(), matchResult)
@@ -88,11 +89,16 @@ class MemoryBoardView(
         if (matchResult != GameStates.Matching) {
             matchedPair.clear()
             android.os.Handler().postDelayed({
-                matchedPair.forEach { it.revealed = false; it.button.setImageResource(deckResource) }
+
+                matchedPair.forEach {
+                    it.revealed = false
+                    it.button.setImageResource(deckResource)
+                }
                 matchedPair.clear()
             }, 1000)
         }
     }
+
 
     fun setOnGameChangeListener(listener: (event: MemoryGameEvent) -> Unit) {
         onGameChangeStateListener = listener
