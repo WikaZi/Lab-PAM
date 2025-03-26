@@ -1,5 +1,6 @@
 package lab03
 import MemoryBoardView
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -15,6 +16,9 @@ import java.util.TimerTask
 class Lab03Activity : AppCompatActivity() {
     private lateinit var mBoard: GridLayout
     private lateinit var mBoardModel: MemoryBoardView
+    lateinit var completionPlayer: MediaPlayer
+    lateinit var negativePlayer: MediaPlayer
+
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -27,12 +31,15 @@ class Lab03Activity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_lab03)
 
+        completionPlayer = MediaPlayer.create(applicationContext, R.raw.completion)
+        negativePlayer = MediaPlayer.create(applicationContext, R.raw.negative_guitar)
+
         mBoard = findViewById(R.id.main3)
 
         val rows = intent.getIntExtra("rows", 3)
         val columns = intent.getIntExtra("columns", 3)
 
-        mBoardModel = MemoryBoardView(mBoard, columns, rows)
+        mBoardModel = MemoryBoardView(mBoard, columns, rows, negativePlayer, completionPlayer)
         mBoard.rowCount = rows
         mBoard.columnCount = columns
 
@@ -47,7 +54,7 @@ class Lab03Activity : AppCompatActivity() {
                 mBoardModel.setState(it)
             }
         } else {
-            mBoardModel = MemoryBoardView(mBoard, columns, rows)
+            mBoardModel = MemoryBoardView(mBoard, columns, rows, negativePlayer, completionPlayer)
         }
 
         mBoardModel.setOnGameChangeListener { e ->
@@ -93,5 +100,17 @@ class Lab03Activity : AppCompatActivity() {
                 }
             }
         }
+    }
+    override protected fun onResume() {
+        super.onResume()
+        completionPlayer = MediaPlayer.create(applicationContext, R.raw.completion)
+        negativePlayer = MediaPlayer.create(applicationContext, R.raw.negative_guitar)
+    }
+
+
+    override protected fun onPause() {
+        super.onPause();
+        completionPlayer.release()
+        negativePlayer.release()
     }
 }

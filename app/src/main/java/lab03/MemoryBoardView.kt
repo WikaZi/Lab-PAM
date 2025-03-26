@@ -1,6 +1,7 @@
 import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.media.MediaPlayer
 import android.view.Gravity
 import android.view.View
 import android.view.animation.DecelerateInterpolator
@@ -10,12 +11,13 @@ import lab03.GameStates
 import lab03.MemoryGameEvent
 import lab03.Tile
 import pl.wsei.pam.lab01.R
-import java.util.Random
 
 class MemoryBoardView(
     private val gridLayout: GridLayout,
     private val cols: Int,
-    private val rows: Int
+    private val rows: Int,
+    private val completionPlayer: MediaPlayer,
+    private val negativePlayer: MediaPlayer
 ) {
     private val tiles: MutableMap<String, Tile> = mutableMapOf()
     private val icons: List<Int> = listOf(
@@ -42,6 +44,7 @@ class MemoryBoardView(
     private var onGameChangeStateListener: (MemoryGameEvent) -> Unit = { _ -> }
     private val matchedPair: ArrayDeque<Tile> = ArrayDeque()
     private val logic: MemoryGameLogic = MemoryGameLogic(cols * rows / 2)
+
 
     fun getState(): IntArray {
         return tiles.values.map {
@@ -91,6 +94,7 @@ class MemoryBoardView(
             }
         }
     }
+
     private fun animatePairedButtons(firstButton: ImageButton, secondButton: ImageButton, action: Runnable) {
         val set = AnimatorSet()
 
@@ -147,6 +151,7 @@ class MemoryBoardView(
     }
 
 
+
     private fun onClickTile(v: View) {
         val tile = tiles[v.tag] ?: return
         if (tile.revealed) return
@@ -174,11 +179,13 @@ class MemoryBoardView(
             onGameChangeStateListener.invoke(event)
 
             if (matchResult == GameStates.Matching) {
-                animatePairedButtons(matchedPair[0].button, matchedPair[1].button) {
+                negativePlayer.start()
+                animatePairedButtons(firstTile.button, secondTile.button) {
                     matchedPair.clear()
                 }
             } else {
                 animateIncorrectPair(firstTile.button, secondTile.button) {
+                    completionPlayer.start()
                     firstTile.revealed = false
                     secondTile.revealed = false
                     firstTile.button.setImageResource(deckResource)
@@ -188,6 +195,7 @@ class MemoryBoardView(
             }
         }
     }
+
 
 
     fun setOnGameChangeListener(listener: (event: MemoryGameEvent) -> Unit) {
