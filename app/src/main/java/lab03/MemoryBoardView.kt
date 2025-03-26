@@ -1,11 +1,16 @@
+import android.animation.Animator
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.view.Gravity
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageButton
 import androidx.gridlayout.widget.GridLayout
 import lab03.GameStates
 import lab03.MemoryGameEvent
 import lab03.Tile
 import pl.wsei.pam.lab01.R
+import java.util.Random
 
 class MemoryBoardView(
     private val gridLayout: GridLayout,
@@ -86,6 +91,61 @@ class MemoryBoardView(
             }
         }
     }
+    private fun animatePairedButtons(firstButton: ImageButton, secondButton: ImageButton, action: Runnable) {
+        val set = AnimatorSet()
+
+        val rotationFirst = ObjectAnimator.ofFloat(firstButton, "rotation", 0f, 360f)
+        val rotationSecond = ObjectAnimator.ofFloat(secondButton, "rotation", 0f, 360f)
+
+        val scaleXFirst = ObjectAnimator.ofFloat(firstButton, "scaleX", 1f, 1.2f, 1f)
+        val scaleXSecond = ObjectAnimator.ofFloat(secondButton, "scaleX", 1f, 1.2f, 1f)
+
+        val scaleYFirst = ObjectAnimator.ofFloat(firstButton, "scaleY", 1f, 1.2f, 1f)
+        val scaleYSecond = ObjectAnimator.ofFloat(secondButton, "scaleY", 1f, 1.2f, 1f)
+
+        set.playTogether(rotationFirst, rotationSecond, scaleXFirst, scaleXSecond, scaleYFirst, scaleYSecond)
+        set.duration = 800
+        set.interpolator = DecelerateInterpolator()
+
+        set.addListener(object : Animator.AnimatorListener {
+            override fun onAnimationEnd(animation: Animator) {
+                action.run()
+            }
+            override fun onAnimationStart(animation: Animator) {}
+            override fun onAnimationCancel(animation: Animator) {}
+            override fun onAnimationRepeat(animation: Animator) {}
+        })
+
+        set.start()
+    }
+
+
+
+    private fun animateIncorrectPair(button1: ImageButton, button2: ImageButton, action: Runnable) {
+        val set = AnimatorSet()
+
+        val rotation1 = ObjectAnimator.ofFloat(button1, "rotation", -10f, 10f, -5f, 5f, 0f)
+        val rotation2 = ObjectAnimator.ofFloat(button2, "rotation", 10f, -10f, 5f, -5f, 0f)
+
+        set.playTogether(rotation1, rotation2)
+        set.duration = 500
+        set.interpolator = DecelerateInterpolator()
+
+        set.addListener(object : Animator.AnimatorListener {
+            override fun onAnimationStart(animator: Animator) {}
+
+            override fun onAnimationEnd(animator: Animator) {
+                action.run()
+            }
+
+            override fun onAnimationCancel(animator: Animator) {}
+
+            override fun onAnimationRepeat(animator: Animator) {}
+        })
+
+        set.start()
+    }
+
 
     private fun onClickTile(v: View) {
         val tile = tiles[v.tag] ?: return
@@ -101,7 +161,10 @@ class MemoryBoardView(
         }
 
         if (matchedPair.size == 2) {
-            val matchResult = if (matchedPair[0].tileResource == matchedPair[1].tileResource) {
+            val firstTile = matchedPair[0]
+            val secondTile = matchedPair[1]
+
+            val matchResult = if (firstTile.tileResource == secondTile.tileResource) {
                 GameStates.Matching
             } else {
                 GameStates.NoMatch
@@ -110,21 +173,22 @@ class MemoryBoardView(
             val event = MemoryGameEvent(matchedPair.toList(), matchResult)
             onGameChangeStateListener.invoke(event)
 
-
-            if (matchResult != GameStates.Matching) {
-                android.os.Handler().postDelayed({
-                    matchedPair.forEach {
-                        it.revealed = false
-                        it.button.setImageResource(deckResource)
-                    }
+            if (matchResult == GameStates.Matching) {
+                animatePairedButtons(matchedPair[0].button, matchedPair[1].button) {
                     matchedPair.clear()
-                }, 1000)
+                }
             } else {
-
-                matchedPair.clear()
+                animateIncorrectPair(firstTile.button, secondTile.button) {
+                    firstTile.revealed = false
+                    secondTile.revealed = false
+                    firstTile.button.setImageResource(deckResource)
+                    secondTile.button.setImageResource(deckResource)
+                    matchedPair.clear()
+                }
             }
         }
     }
+
 
     fun setOnGameChangeListener(listener: (event: MemoryGameEvent) -> Unit) {
         onGameChangeStateListener = listener
