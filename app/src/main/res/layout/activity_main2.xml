@@ -8,6 +8,7 @@
     app:columnCount="2"
     tools:context="pl.wsei.pam.lab02.Lab02Activity">
 
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_6_6"
         android:layout_width="0dp"

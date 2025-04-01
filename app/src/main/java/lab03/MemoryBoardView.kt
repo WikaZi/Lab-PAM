@@ -1,11 +1,16 @@
+import android.R.attr.theme
 import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.media.MediaPlayer
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageButton
+import android.widget.Toast
 import androidx.gridlayout.widget.GridLayout
 import lab03.GameStates
 import lab03.MemoryGameEvent
@@ -16,6 +21,7 @@ class MemoryBoardView(
     private val gridLayout: GridLayout,
     private val cols: Int,
     private val rows: Int,
+    private var isSound: Boolean = true,
     private val completionPlayer: MediaPlayer,
     private val negativePlayer: MediaPlayer
 ) {
@@ -46,6 +52,10 @@ class MemoryBoardView(
     private val logic: MemoryGameLogic = MemoryGameLogic(cols * rows / 2)
 
 
+    fun setSoundState(isSoundEnabled: Boolean) {
+        isSound = isSoundEnabled
+    }
+
     fun getState(): IntArray {
         return tiles.values.map {
             if (it.revealed) it.tileResource else -1
@@ -60,6 +70,7 @@ class MemoryBoardView(
             tile.button.setImageResource(if (tile.revealed) resource else deckResource)
         }
     }
+
 
     init {
         val shuffledIcons: MutableList<Int> = mutableListOf<Int>().apply {
@@ -179,13 +190,13 @@ class MemoryBoardView(
             onGameChangeStateListener.invoke(event)
 
             if (matchResult == GameStates.Matching) {
-                negativePlayer.start()
+                if (isSound) negativePlayer.start()
                 animatePairedButtons(firstTile.button, secondTile.button) {
                     matchedPair.clear()
                 }
             } else {
                 animateIncorrectPair(firstTile.button, secondTile.button) {
-                    completionPlayer.start()
+                    if (isSound) completionPlayer.start()
                     firstTile.revealed = false
                     secondTile.revealed = false
                     firstTile.button.setImageResource(deckResource)
