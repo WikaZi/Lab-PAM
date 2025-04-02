@@ -26,29 +26,30 @@ class Lab03Activity : AppCompatActivity() {
     lateinit var negativePlayer: MediaPlayer
     private var isSound: Boolean = true
 
+
+
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean{
         menuInflater.inflate(R.menu.board_activity_menu, menu)
         return true
     }
-    override fun onOptionsItemSelected(item: MenuItem): Boolean{
-        if (item.itemId == R.id.board_activity_sound){
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.board_activity_sound) {
             val volumeUpIcon = ContextCompat.getDrawable(this, R.drawable.baseline_campaign_24)
             val volumeOffIcon = ContextCompat.getDrawable(this, R.drawable.baseline_do_disturb_24)
 
-            if (isSound){
-                item.setIcon(volumeOffIcon)
-                Toast.makeText(this, "Sound turned off", Toast.LENGTH_SHORT).show()
-                isSound = false
-            }
-            else {
-                item.setIcon(volumeUpIcon)
-                Toast.makeText(this, "Sound turned on", Toast.LENGTH_SHORT).show()
-                isSound = true
-            }
+            isSound = !isSound
+
+            mBoardModel.setSoundState(isSound)
+
+            item.setIcon(if (isSound) volumeUpIcon else volumeOffIcon)
+            Toast.makeText(this, if (isSound) "Sound turned on" else "Sound turned off", Toast.LENGTH_SHORT).show()
+
             return true
         }
         return super.onOptionsItemSelected(item)
     }
+
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -62,7 +63,8 @@ class Lab03Activity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_lab03)
 
-
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
 
 
         completionPlayer = MediaPlayer.create(applicationContext, R.raw.completion)
