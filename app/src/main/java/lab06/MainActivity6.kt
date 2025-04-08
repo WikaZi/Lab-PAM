@@ -1,12 +1,16 @@
 package lab06
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,6 +40,21 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import java.time.LocalDate
+import java.time.Instant
+import java.time.ZoneId
 
 
 class MainActivity6 : ComponentActivity() {
@@ -68,51 +87,54 @@ fun MainScreen() {
 @Composable
 fun ListScreen(navController: NavController) {
     Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                shape = CircleShape,
+                content = {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Add task",
+                        modifier = Modifier.scale(1.5f)
+                    )
+                },
+                onClick = {
+                    navController.navigate("form")
+                }
+            )
+        },
         topBar = {
             AppTopBar(
                 navController = navController,
-                title = "Lista",
+                title = "List",
                 showBackIcon = false,
                 route = "form"
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate("form") },
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Dodaj zadanie",
-                    modifier = Modifier.scale(1.5f)
-                )
-            }
-        },
-        content = { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(text = "Lista", fontSize = 24.sp, modifier = Modifier.padding(16.dp))
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Button(
-                    onClick = { navController.navigate("form") },
-                    modifier = Modifier
-                        .padding(bottom = 32.dp)
-                ) {
-                    Text("Przejdź do formularza")
+        content = {
+            LazyColumn(modifier = Modifier.padding(it)) {
+                items(todoTasks()) { item ->
+                    ListItem(item = item)
                 }
             }
         }
+
     )
 }
 
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormScreen(navController: NavController) {
+    var title by remember { mutableStateOf("") }
+    var deadline by remember { mutableStateOf<LocalDate?>(null) }
+    var isDone by remember { mutableStateOf(false) }
+    var priority by remember { mutableStateOf(Priority.Low) }
+
+
+    val datePickerState = rememberDatePickerState()
+    var isDatePickerOpen by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             AppTopBar(
@@ -122,28 +144,91 @@ fun FormScreen(navController: NavController) {
                 route = "list"
             )
         },
-        content = { paddingValues ->
-            Column(
+        bottomBar = {
+            Button(
+                onClick = {
+                    if (title.isNotBlank() && deadline != null) {
+                        val task = TodoTask(title, deadline!!, isDone, priority)
+                        Toast.makeText(navController.context, "Zapisano: $task", Toast.LENGTH_SHORT).show()
+                        navController.navigate("list")
+                    }
+                },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                Text(text = "Formularz", fontSize = 24.sp, modifier = Modifier.padding(16.dp))
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Button(
-                    onClick = { navController.navigate("list") },
-                    modifier = Modifier
-                        .padding(bottom = 32.dp)
-                ) {
-                    Text("Powrót do listy")
-                }
+                Text("Zapisz zadanie")
             }
         }
-    )
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            TextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Tytuł zadania") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedButton(onClick = { isDatePickerOpen = true }) {
+                Text("Wybierz datę: ${deadline ?: "brak"}")
+            }
+
+            if (isDatePickerOpen) {
+                DatePickerDialog(
+                    onDismissRequest = { isDatePickerOpen = false },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val millis = datePickerState.selectedDateMillis
+                                if (millis != null) {
+                                    deadline = Instant.ofEpochMilli(millis)
+                                        .atZone(ZoneId.systemDefault())
+                                        .toLocalDate()
+                                }
+                                isDatePickerOpen = false
+                            }
+                        ) {
+                            Text("OK")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { isDatePickerOpen = false }) {
+                            Text("Anuluj")
+                        }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
+
+            Text("Priorytet:")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Priority.values().forEach { p ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = priority == p,
+                            onClick = { priority = p }
+                        )
+                        Text(p.name)
+                    }
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = isDone, onCheckedChange = { isDone = it })
+                Text("Zadanie zakończone")
+            }
+        }
+    }
 }
+
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
