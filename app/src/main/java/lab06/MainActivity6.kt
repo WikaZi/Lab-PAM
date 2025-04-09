@@ -1,9 +1,11 @@
 package lab06
 
+import android.R.attr.id
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,14 +46,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
+import lab06.viewmodel.FormViewModel
+import lab06.viewmodel.ListViewModel
+import lab06.viewmodel.TodoTaskForm
+import lab06.viewmodel.TodoTaskUiState
 import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneId
@@ -72,7 +84,6 @@ class MainActivity6 : ComponentActivity() {
 }
 
 
-
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -82,10 +93,13 @@ fun MainScreen() {
     }
 }
 
-
-
 @Composable
-fun ListScreen(navController: NavController) {
+fun ListScreen(
+    navController: NavController,
+    viewModel: ListViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val listUiState by viewModel.listUiState.collectAsState()
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
@@ -110,30 +124,27 @@ fun ListScreen(navController: NavController) {
                 route = "form"
             )
         },
-        content = {
-            LazyColumn(modifier = Modifier.padding(it)) {
-                items(todoTasks()) { item ->
-                    ListItem(item = item)
+        content = { it ->
+            LazyColumn(
+                modifier = Modifier.padding(it)
+            ) {
+                items(items = listUiState.items, key = { it.id }) {
+                    ListItem(it)
                 }
             }
         }
-
     )
 }
 
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormScreen(navController: NavController) {
-    var title by remember { mutableStateOf("") }
-    var deadline by remember { mutableStateOf<LocalDate?>(null) }
-    var isDone by remember { mutableStateOf(false) }
-    var priority by remember { mutableStateOf(Priority.Low) }
-
-
-    val datePickerState = rememberDatePickerState()
-    var isDatePickerOpen by remember { mutableStateOf(false) }
+fun FormScreen(
+    navController: NavController,
+    viewModel: FormViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val todoTaskUiState = viewModel.todoTaskUiState
 
     Scaffold(
         topBar = {
@@ -141,21 +152,27 @@ fun FormScreen(navController: NavController) {
                 navController = navController,
                 title = "Formularz",
                 showBackIcon = true,
-                route = "list"
+                route = "list",
+                onSaveClick = {
+                    coroutineScope.launch {
+                        viewModel.save()
+                        navController.navigate("list")
+                    }
+                }
             )
         },
         bottomBar = {
             Button(
                 onClick = {
-                    if (title.isNotBlank() && deadline != null) {
-                        val task = TodoTask(title, deadline!!, isDone, priority)
-                        Toast.makeText(navController.context, "Zapisano: $task", Toast.LENGTH_SHORT).show()
+                    coroutineScope.launch {
+                        viewModel.save()
                         navController.navigate("list")
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(16.dp),
+                enabled = todoTaskUiState.isValid
             ) {
                 Text("Zapisz zadanie")
             }
@@ -169,14 +186,19 @@ fun FormScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             TextField(
-                value = title,
-                onValueChange = { title = it },
+                value = todoTaskUiState.todoTask.title,
+                onValueChange = { viewModel.updateUiState(todoTaskUiState.todoTask.copy(title = it)) },
                 label = { Text("Tytuł zadania") },
                 modifier = Modifier.fillMaxWidth()
             )
 
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = todoTaskUiState.todoTask.deadline
+            )
+            var isDatePickerOpen by remember { mutableStateOf(false) }
+
             OutlinedButton(onClick = { isDatePickerOpen = true }) {
-                Text("Wybierz datę: ${deadline ?: "brak"}")
+                Text("Wybierz datę: ${todoTaskUiState.todoTask.deadline?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() } ?: "brak"}")
             }
 
             if (isDatePickerOpen) {
@@ -187,9 +209,7 @@ fun FormScreen(navController: NavController) {
                             onClick = {
                                 val millis = datePickerState.selectedDateMillis
                                 if (millis != null) {
-                                    deadline = Instant.ofEpochMilli(millis)
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate()
+                                    viewModel.updateUiState(todoTaskUiState.todoTask.copy(deadline = millis))
                                 }
                                 isDatePickerOpen = false
                             }
@@ -212,8 +232,8 @@ fun FormScreen(navController: NavController) {
                 Priority.values().forEach { p ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
-                            selected = priority == p,
-                            onClick = { priority = p }
+                            selected = todoTaskUiState.todoTask.priority == p.name,
+                            onClick = { viewModel.updateUiState(todoTaskUiState.todoTask.copy(priority = p.name)) }
                         )
                         Text(p.name)
                     }
@@ -221,15 +241,84 @@ fun FormScreen(navController: NavController) {
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = isDone, onCheckedChange = { isDone = it })
+                Checkbox(
+                    checked = todoTaskUiState.todoTask.isDone,
+                    onCheckedChange = { viewModel.updateUiState(todoTaskUiState.todoTask.copy(isDone = it)) }
+                )
                 Text("Zadanie zakończone")
             }
         }
     }
 }
 
+@Composable
+fun TodoTaskInputBody(
+    todoUiState: TodoTaskUiState,
+    onItemValueChange: (TodoTaskForm) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        TodoTaskInputForm(
+            item = todoUiState.todoTask,
+            onValueChange = onItemValueChange,
+            modifier = modifier
+        )
+    }
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TodoTaskInputForm(
+    item: TodoTaskForm,
+    modifier: Modifier = Modifier,
+    onValueChange: (TodoTaskForm) -> Unit = {},
+    enabled: Boolean = true
+) {
+    Text("Tytuł zadania")
+    TextField(
+        value = item.title,
+        onValueChange = {
+            onValueChange(item.copy(title = it))
+        })
 
+    val datePickerState = rememberDatePickerState(
+        initialDisplayMode = DisplayMode.Picker,
+        yearRange = IntRange(2000, 2030),
+        initialSelectedDateMillis = item.deadline,
+    )
+
+    var showDialog by remember {
+        mutableStateOf(false)
+    }
+
+    Text(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = { showDialog = true }),
+        text = "Date",
+        textAlign = TextAlign.Center,
+        style = MaterialTheme.typography.headlineMedium
+    )
+
+    if (showDialog) {
+        DatePickerDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                Button(onClick = {
+                    showDialog = false
+                    onValueChange(item.copy(deadline = datePickerState.selectedDateMillis!!))
+                }) {
+                    Text("Pick")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState, showModeToggle = true)
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -237,7 +326,8 @@ fun AppTopBar(
     navController: NavController,
     title: String,
     showBackIcon: Boolean,
-    route: String
+    route: String,
+    onSaveClick: () -> Unit = { }
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -258,7 +348,7 @@ fun AppTopBar(
         actions = {
             if (route != "form") {
                 OutlinedButton(
-                    onClick = { navController.navigate("list") }
+                    onClick = onSaveClick
                 ) {
                     Text(
                         text = "Zapisz",
