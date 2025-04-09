@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import lab06.TodoTask
 import lab06.data.TodoTaskRepository
 
@@ -19,7 +20,11 @@ class ListViewModel(val repository: TodoTaskRepository) : ViewModel() {
                     initialValue = ListUiState()
                 )
         }
-
+    fun deleteItem(task: TodoTask) {
+        viewModelScope.launch {
+            repository.deleteItem(task)
+        }
+    }
     companion object {
         private const val TIMEOUT_MILLIS = 5_000L
     }

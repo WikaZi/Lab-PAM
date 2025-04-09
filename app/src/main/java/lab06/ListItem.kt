@@ -6,18 +6,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ListItem(item: TodoTask, modifier: Modifier = Modifier) {
+fun ListItem(item: TodoTask, modifier: Modifier = Modifier, onDelete: () -> Unit) {
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
@@ -37,6 +42,13 @@ fun ListItem(item: TodoTask, modifier: Modifier = Modifier) {
                 Text(text = "Priority: ${item.priority}", style = MaterialTheme.typography.bodyMedium)
             }
             Checkbox(checked = item.isDone, onCheckedChange = null)
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Usuń zadanie",
+                    tint = Color.Red
+                )
+            }
         }
     }
 }

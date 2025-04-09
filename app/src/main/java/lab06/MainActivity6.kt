@@ -128,8 +128,11 @@ fun ListScreen(
             LazyColumn(
                 modifier = Modifier.padding(it)
             ) {
-                items(items = listUiState.items, key = { it.id }) {
-                    ListItem(it)
+                items(items = listUiState.items, key = { it.id })  { task ->
+                    ListItem(
+                        item = task,
+                        onDelete = { viewModel.deleteItem(task) }
+                    )
                 }
             }
         }
