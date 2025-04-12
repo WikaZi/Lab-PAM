@@ -9,21 +9,20 @@ import lab06.viewmodel.ListViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
+        val container = TodoApplication.container
         initializer {
             ListViewModel(
-                repository = todoApplication().container.todoTaskRepository
+                repository = container.todoTaskRepository
             )
         }
         initializer {
             FormViewModel(
-                repository = todoApplication().container.todoTaskRepository,
-                currentDateProvider = todoApplication().container.currentDateProvider
+                repository = container.todoTaskRepository,
+                currentDateProvider =container.currentDateProvider
             )
         }
     }
 }
-
-
 
 fun CreationExtras.todoApplication(): TodoApplication {
     val app = this[APPLICATION_KEY]

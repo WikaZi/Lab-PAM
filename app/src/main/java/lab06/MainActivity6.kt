@@ -1,10 +1,13 @@
 package lab06
 
-import android.R.attr.id
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,43 +62,104 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import lab06.viewmodel.FormViewModel
 import lab06.viewmodel.ListViewModel
 import lab06.viewmodel.TodoTaskForm
 import lab06.viewmodel.TodoTaskUiState
-import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneId
+import android.Manifest
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Intent
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.runtime.LaunchedEffect
+import com.google.accompanist.permissions.isGranted
 
+
+const val notificationID = 121
+const val channelID = "Lab06 channel"
+const val titleExtra = "title"
+const val messageExtra = "message"
 
 class MainActivity6 : ComponentActivity() {
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
+        val container = TodoApplication.container
+        scheduleAlarm(2_000)
         setContent {
             Lab06Theme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    MainScreen()
+                    MainScreen(notificationHandler = container.notificationHandler)
                 }
             }
         }
+    }
+    private fun createNotificationChannel() {
+        val name = "Lab06 channel"
+        val descriptionText = "Lab06 is channel for notifications for approaching tasks."
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel(channelID , name, importance).apply {
+            description = descriptionText
+        }
+        val notificationManager: NotificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+    fun scheduleAlarm(time: Long){
+        val intent = Intent(applicationContext, NotificationBroadcastReceiver::class.java)
+        intent.putExtra(titleExtra, "Deadline")
+        intent.putExtra(messageExtra, "Zbliża się termin zakończenia zadania")
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            applicationContext,
+            notificationID,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            time,
+            pendingIntent
+        )
     }
 
 }
 
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(notificationHandler: NotificationHandler) {
     val navController = rememberNavController()
+    //
+    val postNotificationPermission =
+        rememberPermissionState(permission = Manifest.permission.POST_NOTIFICATIONS)
+    LaunchedEffect(key1 = true) {
+        if (!postNotificationPermission.status.isGranted) {
+            postNotificationPermission.launchPermissionRequest()
+        }
+    }
+    //
     NavHost(navController = navController, startDestination = "list") {
-        composable("list") { ListScreen(navController = navController) }
-        composable("form") { FormScreen(navController = navController) }
+        composable(route = "list") { ListScreen(navController = navController, notificationHandler = notificationHandler) }
+        composable("form") { FormScreen(navController = navController, notificationHandler = notificationHandler) }
     }
 }
 
 @Composable
 fun ListScreen(
     navController: NavController,
+    notificationHandler: NotificationHandler,
     viewModel: ListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val listUiState by viewModel.listUiState.collectAsState()
@@ -121,7 +185,8 @@ fun ListScreen(
                 navController = navController,
                 title = "List",
                 showBackIcon = false,
-                route = "form"
+                route = "form",
+                notificationHandler = notificationHandler
             )
         },
         content = { it ->
@@ -144,6 +209,7 @@ fun ListScreen(
 @Composable
 fun FormScreen(
     navController: NavController,
+    notificationHandler: NotificationHandler,
     viewModel: FormViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -161,7 +227,8 @@ fun FormScreen(
                         viewModel.save()
                         navController.navigate("list")
                     }
-                }
+                },
+                notificationHandler = notificationHandler
             )
         },
         bottomBar = {
@@ -330,7 +397,8 @@ fun AppTopBar(
     title: String,
     showBackIcon: Boolean,
     route: String,
-    onSaveClick: () -> Unit = { }
+    onSaveClick: () -> Unit = { },
+    notificationHandler: NotificationHandler
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -359,6 +427,11 @@ fun AppTopBar(
                     )
                 }
             } else {
+                IconButton(onClick = {
+                notificationHandler.showSimpleNotification()
+                }){
+                    Icon(imageVector = Icons.Default.Notifications, contentDescription = "Notifications")
+                }
                 IconButton(onClick = { /*TODO*/ }) {
                     Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
                 }
@@ -369,5 +442,6 @@ fun AppTopBar(
         }
     )
 }
+
 
 
