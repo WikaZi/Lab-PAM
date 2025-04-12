@@ -78,6 +78,11 @@ import android.content.Intent
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.LaunchedEffect
 import com.google.accompanist.permissions.isGranted
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import lab06.data.AppDatabase
+import lab06.data.DatabaseTodoTaskRepository
+import lab06.data.TodoTaskRepository
 
 
 const val notificationID = 121
@@ -87,12 +92,23 @@ const val messageExtra = "message"
 
 class MainActivity6 : ComponentActivity() {
 
+    private lateinit var taskAlarmManager: TaskAlarmManager
+    private lateinit var todoTaskRepository: TodoTaskRepository
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
         val container = TodoApplication.container
-        scheduleAlarm(2_000)
+        val appDatabase = AppDatabase.getInstance(applicationContext)
+        val dao = appDatabase.taskDao()
+        todoTaskRepository = DatabaseTodoTaskRepository(dao)
+
+        taskAlarmManager = TaskAlarmManager(this, todoTaskRepository)
+        CoroutineScope(Dispatchers.Main).launch {
+            taskAlarmManager.scheduleAlarmForClosestTask()
+        }
+        //scheduleAlarm(2_000)
         setContent {
             Lab06Theme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -112,26 +128,26 @@ class MainActivity6 : ComponentActivity() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
-    fun scheduleAlarm(time: Long){
-        val intent = Intent(applicationContext, NotificationBroadcastReceiver::class.java)
-        intent.putExtra(titleExtra, "Deadline")
-        intent.putExtra(messageExtra, "Zbliża się termin zakończenia zadania")
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            applicationContext,
-            notificationID,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            time,
-            pendingIntent
-        )
-    }
+//    fun scheduleAlarm(time: Long){
+//        val intent = Intent(applicationContext, NotificationBroadcastReceiver::class.java)
+//        intent.putExtra(titleExtra, "Deadline")
+//        intent.putExtra(messageExtra, "Zbliża się termin zakończenia zadania")
+//
+//        val pendingIntent = PendingIntent.getBroadcast(
+//            applicationContext,
+//            notificationID,
+//            intent,
+//            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+//        )
+//
+//        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+//
+//        alarmManager.setExactAndAllowWhileIdle(
+//            AlarmManager.RTC_WAKEUP,
+//            time,
+//            pendingIntent
+//        )
+//    }
 
 }
 
