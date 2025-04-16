@@ -72,11 +72,14 @@ import lab06.viewmodel.TodoTaskUiState
 import java.time.Instant
 import java.time.ZoneId
 import android.Manifest
-import android.app.AlarmManager
-import android.app.PendingIntent
-import android.content.Intent
+import android.preference.PreferenceManager
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.input.KeyboardType
 import com.google.accompanist.permissions.isGranted
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,7 +96,9 @@ const val messageExtra = "message"
 class MainActivity6 : ComponentActivity() {
 
     private lateinit var taskAlarmManager: TaskAlarmManager
+    private lateinit var preferencesManager: PreferenceManager
     private lateinit var todoTaskRepository: TodoTaskRepository
+
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,7 +109,9 @@ class MainActivity6 : ComponentActivity() {
         val dao = appDatabase.taskDao()
         todoTaskRepository = DatabaseTodoTaskRepository(dao)
 
-        taskAlarmManager = TaskAlarmManager(this, todoTaskRepository)
+        val preferencesManager = PreferencesManager(this)
+        taskAlarmManager = TaskAlarmManager(this, todoTaskRepository, preferencesManager)
+
         CoroutineScope(Dispatchers.Main).launch {
             taskAlarmManager.scheduleAlarmForClosestTask()
         }
@@ -112,7 +119,7 @@ class MainActivity6 : ComponentActivity() {
         setContent {
             Lab06Theme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    MainScreen(notificationHandler = container.notificationHandler)
+                    MainScreen(notificationHandler = container.notificationHandler, preferencesManager = preferencesManager)
                 }
             }
         }
@@ -149,13 +156,46 @@ class MainActivity6 : ComponentActivity() {
 //        )
 //    }
 
-}
 
+}
+@Composable
+fun SettingsScreen(navController: NavController, preferencesManager: PreferencesManager) {
+    var hoursBeforeDeadline by remember { mutableStateOf("") }
+    var repeatInterval by remember { mutableStateOf("") }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("Ustawienia powiadomień", style = MaterialTheme.typography.titleLarge)
+
+        OutlinedTextField(
+            value = hoursBeforeDeadline,
+            onValueChange = { hoursBeforeDeadline = it },
+            label = { Text("Ile godzin przed terminem?") },
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+        )
+
+        OutlinedTextField(
+            value = repeatInterval,
+            onValueChange = { repeatInterval = it },
+            label = { Text("Co ile godzin powtarzać?") },
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = {
+            preferencesManager.saveHoursBefore(hoursBeforeDeadline.toInt())
+            preferencesManager.saveRepeatInterval(repeatInterval.toInt())
+            navController.navigate("list")
+        }) {
+            Text("Zapisz ustawienia")
+        }
+    }
+}
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MainScreen(notificationHandler: NotificationHandler) {
+fun MainScreen(notificationHandler: NotificationHandler, preferencesManager: PreferencesManager) {
     val navController = rememberNavController()
     //
     val postNotificationPermission =
@@ -169,8 +209,14 @@ fun MainScreen(notificationHandler: NotificationHandler) {
     NavHost(navController = navController, startDestination = "list") {
         composable(route = "list") { ListScreen(navController = navController, notificationHandler = notificationHandler) }
         composable("form") { FormScreen(navController = navController, notificationHandler = notificationHandler) }
+        composable("settings") {
+            SettingsScreen(navController = navController, preferencesManager = preferencesManager)
+        }
     }
+
 }
+
+
 
 @Composable
 fun ListScreen(
@@ -414,7 +460,8 @@ fun AppTopBar(
     showBackIcon: Boolean,
     route: String,
     onSaveClick: () -> Unit = { },
-    notificationHandler: NotificationHandler
+    notificationHandler: NotificationHandler,
+
 ) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
@@ -448,7 +495,7 @@ fun AppTopBar(
                 }){
                     Icon(imageVector = Icons.Default.Notifications, contentDescription = "Notifications")
                 }
-                IconButton(onClick = { /*TODO*/ }) {
+                IconButton(onClick = { navController.navigate("settings") }) {
                     Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings")
                 }
                 IconButton(onClick = { /*TODO*/ }) {
